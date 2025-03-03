@@ -1,0 +1,13 @@
+{
+    "applications": [
+        {"id": "App1", "ip": "192.168.1.1", "port": 5000, "type": "Texte"},
+        {"id": "App2", "ip": "192.168.1.2", "port": 5001, "type": "Image"},
+        {"id": "App3", "ip": "192.168.1.3", "port": 5002, "type": "Multiprotocole"},
+        {"id": "App4", "ip": "192.168.1.4", "port": 5003, "type": "Vidéo"}
+    ],
+    "connexions": [
+        {"source": "App1", "destination": "App3", "metrique": 10},
+        {"source": "App2", "destination": "App3", "metrique": 15},
+        {"source": "App3", "destination": "App4", "metrique": 8}
+    ]
+}

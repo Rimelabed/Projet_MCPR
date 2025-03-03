@@ -1,0 +1,20 @@
+Host AppRecouv_1
+    AddressFamily inet6
+    HostName 2001:678:3fc:3c:baad:caff:fefe:a9
+    User etu
+    Port 2222
+    ForwardAgent yes
+
+Host AppCible_1
+    AddressFamily inet6
+    HostName 2001:678:3fc:3c:baad:caff:fefe:a0
+    User etu
+    Port 2222
+    ForwardAgent yes
+
+Host AppCible_2
+    AddressFamily inet6
+    HostName 2001:678:3fc:3c:baad:caff:fefe:a1
+    User etu
+    Port 2222
+    ForwardAgent yes

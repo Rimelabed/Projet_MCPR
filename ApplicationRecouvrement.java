@@ -23,10 +23,10 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
         this.voisins = new HashMap<>();
         this.tableRoutage = new TableRoutage();
         this.messagesRecus = new HashSet<>();
-        chargerVoisins();
+        //chargerVoisins();
     }
 
-    private void chargerVoisins() {
+    public void chargerVoisins() {
         try {
             JSONParser parser = new JSONParser();
             JSONObject reseau = (JSONObject) parser.parse(new FileReader("reseau.json"));
@@ -35,16 +35,59 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
 
             if (config != null) {
                 JSONObject voisinsConfig = (JSONObject) config.get("voisins");
-                for (Object key : voisinsConfig.keySet()) {
-                    String voisinNom = (String) key;
-                    String voisinIP = (String) ((JSONObject) recouvrements.get(voisinNom)).get("adresse");
-                    int distance = ((Long) voisinsConfig.get(key)).intValue();
 
-                    System.out.println("[INFO] " + nom + " a pour voisin : " + voisinNom + " @ " + voisinIP);
-                    RmiNodeInterface voisin = (RmiNodeInterface) Naming.lookup("//" + voisinIP + "/Recouvrement");
-                    voisins.put(voisinNom, voisin);
-                    tableRoutage.mettreAJour(voisinNom, distance);
+            for (Object key : voisinsConfig.keySet()) {
+                String voisinNom = (String) key;
+                String voisinIP = null;
+
+                System.out.println("[DEBUG] Vérification du voisin : " + voisinNom);
+
+                // Vérifier si le voisin est un recouvrement
+                if (recouvrements.containsKey(voisinNom)) {
+                    System.out.println("[DEBUG] " + voisinNom + " est un recouvrement.");
+                    JSONObject voisinConfig = (JSONObject) recouvrements.get(voisinNom);
+                    
+                    if (voisinConfig == null) {
+                        System.err.println("[ERREUR] voisinConfig est NULL pour " + voisinNom);
+                        continue;
+                    }
+
+                    voisinIP = (String) voisinConfig.get("adresse");
+
+                    if (voisinIP == null) {
+                        System.err.println("[ERREUR] Impossible de récupérer l'adresse de " + voisinNom);
+                    }
                 }
+                // Vérifier si le voisin est une application cible
+                else if (reseau.containsKey("applications_cibles")) {
+                    JSONObject applicationsCibles = (JSONObject) reseau.get("applications_cibles");
+
+                    if (applicationsCibles == null) {
+                        System.err.println("[ERREUR] La section applications_cibles est NULL !");
+                        continue;
+                    }
+
+                    if (applicationsCibles.containsKey(voisinNom)) {
+                        System.out.println("[DEBUG] " + voisinNom + " est une application cible.");
+                        voisinIP = (String) applicationsCibles.get(voisinNom);
+
+                        if (voisinIP == null) {
+                            System.err.println("[ERREUR] Impossible de récupérer l'adresse de " + voisinNom + " dans applications_cibles.");
+                        }
+                    }
+                } else {
+                    System.err.println("[ERREUR] " + voisinNom + " n'existe ni dans recouvrements ni dans applications_cibles !");
+                }
+
+                if (voisinIP == null) {
+                    System.err.println("[ERREUR] " + nom + " : Impossible de trouver l'IP de " + voisinNom);
+                    continue;
+                }
+
+                System.out.println("[INFO] " + nom + " a pour voisin : " + voisinNom + " @ " + voisinIP);
+            }
+
+
             }
         } catch (Exception e) {
             System.err.println("[ERREUR] Impossible de charger le fichier JSON : " + e.getMessage());
@@ -81,4 +124,12 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
             voisin.recevoirTableRoutage(nom, tableRoutage.getRoutes());
         }
     }
+    public String getNom() {
+        return nom;
+    }
+
+    public Map<String, RmiNodeInterface> getVoisins() {
+        return voisins;
+    }
+
 }

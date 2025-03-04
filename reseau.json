@@ -11,15 +11,13 @@
             "adresse": "198.18.60.90",
             "voisins": {
                 "AppRecouv_1": 1,
-                "AppRecouv_3": 1,
                 "AppCible_3": 1
             }
         },
         "AppRecouv_3": {
-            "adresse": "198.18.60.91",
+            "adresse": "198.18.60.93",
             "voisins": {
                 "AppRecouv_1": 1,
-                "AppRecouv_2": 1,
                 "AppCible_1": 1,
                 "AppCible_2": 1
             }
@@ -28,6 +26,6 @@
     "applications_cibles": {
         "AppCible_1": "198.18.61.160",
         "AppCible_2": "198.18.61.161",
-        "AppCible_3": "198.18.60.92"
+        "AppCible_3": "198.18.60.94"
     }
 }

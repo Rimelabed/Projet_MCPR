@@ -15,7 +15,7 @@ public class TableRoutage {
             return true;
         }
         return false;
-    }
+    } 
 
     public Map<String, Integer> getRoutes() {
         return new HashMap<>(routes);

@@ -1,19 +1,28 @@
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import java.io.FileReader;
 
 public class MainServeur {
     public static void main(String[] args) {
         try {
-            // Démarrer le registre RMI sur Rec1
-            LocateRegistry.createRegistry(1099);
+            LocateRegistry.createRegistry(1099);  // On s’assure que RMI tourne
 
-            // Création et enregistrement d'un seul recouvrement
-            ApplicationRecouvrement rec1 = new ApplicationRecouvrement("Rec1");
+            JSONParser parser = new JSONParser();
+            JSONObject reseau = (JSONObject) parser.parse(new FileReader("reseau.json"));
+            JSONObject recouvrements = (JSONObject) reseau.get("recouvrements");
 
-            Registry registry = LocateRegistry.getRegistry();
-            registry.rebind("Rec1", rec1);
+            for (Object key : recouvrements.keySet()) {
+                String nom = (String) key;
+                String adresse = (String) ((JSONObject) recouvrements.get(nom)).get("adresse");
 
-            System.out.println("Serveur RMI prêt !");
+                ApplicationRecouvrement recouvrement = new ApplicationRecouvrement(nom, adresse);
+                Registry registry = LocateRegistry.getRegistry();
+                registry.rebind(nom, recouvrement);
+
+                System.out.println("[INFO] Serveur RMI démarré pour " + nom + " à " + adresse);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

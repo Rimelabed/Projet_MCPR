@@ -1,13 +1,33 @@
 {
-    "applications": [
-        {"id": "App1", "ip": "192.168.1.1", "port": 5000, "type": "Texte"},
-        {"id": "App2", "ip": "192.168.1.2", "port": 5001, "type": "Image"},
-        {"id": "App3", "ip": "192.168.1.3", "port": 5002, "type": "Multiprotocole"},
-        {"id": "App4", "ip": "192.168.1.4", "port": 5003, "type": "Vidéo"}
-    ],
-    "connexions": [
-        {"source": "App1", "destination": "App3", "metrique": 10},
-        {"source": "App2", "destination": "App3", "metrique": 15},
-        {"source": "App3", "destination": "App4", "metrique": 8}
-    ]
+    "recouvrements": {
+        "AppRecouv_1": {
+            "adresse": "198.18.61.169",
+            "voisins": {
+                "AppRecouv_2": 1,
+                "AppRecouv_3": 1
+            }
+        },
+        "AppRecouv_2": {
+            "adresse": "198.18.60.90",
+            "voisins": {
+                "AppRecouv_1": 1,
+                "AppRecouv_3": 1,
+                "AppCible_3": 1
+            }
+        },
+        "AppRecouv_3": {
+            "adresse": "198.18.60.91",
+            "voisins": {
+                "AppRecouv_1": 1,
+                "AppRecouv_2": 1,
+                "AppCible_1": 1,
+                "AppCible_2": 1
+            }
+        }
+    },
+    "applications_cibles": {
+        "AppCible_1": "198.18.61.160",
+        "AppCible_2": "198.18.61.161",
+        "AppCible_3": "198.18.60.92"
+    }
 }

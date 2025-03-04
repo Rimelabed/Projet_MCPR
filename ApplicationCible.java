@@ -1,66 +1,51 @@
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.UUID;
 
-public class ApplicationCible extends UnicastRemoteObject  {
+public class ApplicationCible extends UnicastRemoteObject {
     private String nom;
     private RmiNodeInterface noeudRecouvrement;
-    private String adresseLocale;
 
-    public ApplicationCible(String nom, String adresseRecouvrement, String adresseLocale) throws RemoteException {
+    public ApplicationCible(String nom, String adresseRecouvrement) throws RemoteException {
         super();
         this.nom = nom;
-        this.adresseLocale = adresseLocale;
 
         try {
-            // // Enregistrer cette application cible dans RMI
-            // Naming.rebind("//" + adresseLocale + "/" + nom, this);
-            // System.out.println(nom + " enregistré sur " + adresseLocale + " dans le registre RMI.");
-
-            // Connexion au recouvrement
-            noeudRecouvrement = (RmiNodeInterface) Naming.lookup("//" + adresseRecouvrement + "/Rec1");
+            // Connexion au recouvrement via RMI
+            noeudRecouvrement = (RmiNodeInterface) Naming.lookup("//" + adresseRecouvrement + "/Recouvrement");
             System.out.println(nom + " connecté à " + adresseRecouvrement);
-
         } catch (Exception e) {
             System.err.println("Erreur connexion RMI: " + e.getMessage());
         }
     }
 
+    public void envoyerMessage(String contenu) throws RemoteException {
+        // ✅ Définition propre du messageId et du TTL
+        String messageId = UUID.randomUUID().toString();  // Génère un ID unique pour le message
+        int ttl = 3;  // Définition du TTL initial
 
-    public void recevoirMessage(String source, String message) throws RemoteException {
-        System.out.println("[Cible " + nom + "] Message reçu de " + source + " : " + message);
-    }
-
-
-    public void envoyerMessage(String source, String message) throws RemoteException {
         if (noeudRecouvrement != null) {
-            System.out.println("[Cible " + nom + "] Envoi message : " + message);
-            noeudRecouvrement.recevoirMessage(nom, message);
+            System.out.println("[Cible " + nom + "] Envoi du message avec TTL=" + ttl);
+            noeudRecouvrement.recevoirMessage(nom, messageId, ttl, contenu);
         } else {
-            System.out.println("[Cible " + nom + "] Impossible d'envoyer le message, noeud de recouvrement non disponible.");
+            System.out.println("[Cible " + nom + "] Erreur : Noeud de recouvrement non disponible !");
         }
     }
 
-
-    public String getAdresseLogique() throws RemoteException {
-        return nom;
-    }
-
     public static void main(String[] args) {
-        if (args.length != 3) {
-            System.out.println("Usage : java ApplicationCible <nomCible> <adresseRecouvrement> <adresseLocale>");
+        if (args.length != 2) {
+            System.out.println("Usage : java ApplicationCible <NomCible> <AdresseRecouvrement>");
             System.exit(1);
         }
 
         try {
             String nom = args[0];
-            String adresseRecouvrement = args[1]; // IP du recouvrement associé
-            String adresseLocale = args[2]; // IP de CETTE application cible
+            String adresseRecouvrement = args[1];
+            ApplicationCible cible = new ApplicationCible(nom, adresseRecouvrement);
 
-            ApplicationCible cible = new ApplicationCible(nom, adresseRecouvrement, adresseLocale);
-
-            // Envoi d'un message de test après connexion
-            cible.envoyerMessage(nom, "Hello depuis " + nom + " !");
+            // ✅ Envoi d'un message de test après connexion
+            cible.envoyerMessage("Hello depuis " + nom + " !");
         } catch (Exception e) {
             System.err.println("Erreur démarrage ApplicationCible: " + e.getMessage());
         }

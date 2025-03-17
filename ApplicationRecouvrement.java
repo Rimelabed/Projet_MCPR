@@ -85,6 +85,15 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
                 }
 
                 System.out.println("[INFO] " + nom + " a pour voisin : " + voisinNom + " @ " + voisinIP);
+
+                try {
+                    System.out.println("[DEBUG] " + nom + " tente de se connecter à " + voisinNom + " via RMI...");
+                    RmiNodeInterface voisin = (RmiNodeInterface) Naming.lookup("//" + voisinIP + "/" + voisinNom);
+                    voisins.put(voisinNom, voisin);
+                    System.out.println("[SUCCESS] " + nom + " est connecté à " + voisinNom + " !");
+                } catch (Exception e) {
+                    System.err.println("[ERREUR] Impossible de se connecter à " + voisinNom + " : " + e.getMessage());
+                }
             }
 
 

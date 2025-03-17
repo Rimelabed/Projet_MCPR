@@ -93,3 +93,36 @@ Rec1 s’occupe de relayer le message à l’autre ApplicationCible.
 
 **📌 RmiNodeInterface.java**
 Interface partagée entre toutes les machines définissant les méthodes RMI utilisées pour envoyer des messages.
+
+---
+
+### Nouveau réseau pour finaliser la version2
+
+#### AppRecouv_2
+Starting AppRecouv_2...
+Waiting a second for TPM socket to be ready.
+~> Virtual machine filename   : AppRecouv_2.qcow2
+~> RAM size                   : 2048MB
+~> SPICE VDI port number      : 6114
+~> telnet console port number : 2514
+~> MAC address                : b8:ad:ca:fe:00:d6
+~> Switch port interface      : tap214, access mode
+~> IPv6 LL address            : fe80::baad:caff:fefe:d6%vlan60
+AppRecouv_2 started!
+
+#### AppRecouv_3
+elhadjibadji@oscar:~/_PROJET_MCPR$ $HOME/masters/scripts/lab-startup.py lab3.yaml
+AppRecouv_3.qcow2 already exists!
+Starting AppRecouv_3...
+Waiting a second for TPM socket to be ready.
+~> Virtual machine filename   : AppRecouv_3.qcow2
+~> RAM size                   : 2048MB
+~> SPICE VDI port number      : 6115
+~> telnet console port number : 2515
+~> MAC address                : b8:ad:ca:fe:00:d7
+~> Switch port interface      : tap215, access mode
+~> IPv6 LL address            : fe80::baad:caff:fefe:d7%vlan60
+AppRecouv_3 started!
+elhadjibadji@oscar:~/_PROJET_MCPR$
+
+

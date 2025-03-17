@@ -1,53 +1,97 @@
+import java.io.FileReader;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.UUID;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 public class ApplicationCible extends UnicastRemoteObject {
     private String nom;
+    private String adresseRecouvrement;
     private RmiNodeInterface noeudRecouvrement;
 
-    public ApplicationCible(String nom, String adresseRecouvrement) throws RemoteException {
+    public ApplicationCible(String nom) throws RemoteException {
         super();
         this.nom = nom;
+        this.noeudRecouvrement = null;
 
         try {
-            // Connexion au recouvrement via RMI
-            noeudRecouvrement = (RmiNodeInterface) Naming.lookup("//" + adresseRecouvrement + "/Recouvrement");
-            System.out.println(nom + " connecté à " + adresseRecouvrement);
+            // Charger les informations du réseau
+            JSONParser parser = new JSONParser();
+            JSONObject reseau = (JSONObject) parser.parse(new FileReader("reseau.json"));
+            JSONObject applicationsCibles = (JSONObject) reseau.get("applications_cibles");
+            JSONObject recouvrements = (JSONObject) reseau.get("recouvrements");
+
+            if (!applicationsCibles.containsKey(nom)) {
+                System.err.println("[ERREUR] L'application cible " + nom + " n'est pas définie dans reseau.json !");
+                return;
+            }
+
+            // Trouver le recouvrement correspondant
+            for (Object key : recouvrements.keySet()) {
+                String recouvrementNom = (String) key;
+                JSONObject recouvrementConfig = (JSONObject) recouvrements.get(recouvrementNom);
+                JSONObject voisins = (JSONObject) recouvrementConfig.get("voisins");
+
+                if (voisins != null && voisins.containsKey(nom)) {
+                    adresseRecouvrement = (String) recouvrementConfig.get("adresse");
+                    System.out.println("[INFO] " + nom + " est associé à " + recouvrementNom + " @ " + adresseRecouvrement);
+                    connecterAuRecouvrement(recouvrementNom);
+                    return;
+                }
+            }
+
+            System.err.println("[ERREUR] Aucun recouvrement trouvé pour " + nom);
         } catch (Exception e) {
-            System.err.println("Erreur connexion RMI: " + e.getMessage());
+            System.err.println("[ERREUR] Impossible de charger les informations réseau : " + e.getMessage());
         }
+    }
+
+    private void connecterAuRecouvrement(String recouvrementNom) {
+       while (true) {  // Réessaie jusqu'à réussir à se connecter à une appli de recouvrement
+        try {
+            System.out.println("[DEBUG] " + nom + " tente de se connecter à " + recouvrementNom + " via RMI...");
+            noeudRecouvrement = (RmiNodeInterface) Naming.lookup("//" + adresseRecouvrement + "/" + recouvrementNom);
+            System.out.println("[SUCCESS] " + nom + " est connecté à " + recouvrementNom + " !");
+            break;  // On sort de la boucle une fois connecté
+        } catch (Exception e) {
+            System.err.println("[ERREUR] " + nom + " : Impossible de contacter " + recouvrementNom + " (Réessaie dans 5s)");
+            try {
+                Thread.sleep(5000); // Attente de cinq secoondes avant la prochaine tentative - Modulable 
+            } catch (InterruptedException ignored) {}
+        }
+    }
     }
 
     public void envoyerMessage(String contenu) throws RemoteException {
-        // ✅ Définition propre du messageId et du TTL
-        String messageId = UUID.randomUUID().toString();  // Génère un ID unique pour le message
-        int ttl = 3;  // Définition du TTL initial
-
-        if (noeudRecouvrement != null) {
-            System.out.println("[Cible " + nom + "] Envoi du message avec TTL=" + ttl);
-            noeudRecouvrement.recevoirMessage(nom, messageId, ttl, contenu);
-        } else {
-            System.out.println("[Cible " + nom + "] Erreur : Noeud de recouvrement non disponible !");
+        if (noeudRecouvrement == null) {
+            System.out.println("[ERREUR] " + nom + " : Aucun noeud de recouvrement connecté !");
+            return;
         }
+
+        //  Générer un ID unique et définir un TTL
+        String messageId = UUID.randomUUID().toString();
+        int ttl = 3;
+
+        System.out.println("[INFO] " + nom + " envoie un message avec TTL=" + ttl);
+        noeudRecouvrement.recevoirMessage(nom, messageId, ttl, contenu);
     }
 
     public static void main(String[] args) {
-        if (args.length != 2) {
-            System.out.println("Usage : java ApplicationCible <NomCible> <AdresseRecouvrement>");
+        if (args.length != 1) {
+            System.out.println("Usage : java ApplicationCible <NomCible>");
             System.exit(1);
         }
 
         try {
             String nom = args[0];
-            String adresseRecouvrement = args[1];
-            ApplicationCible cible = new ApplicationCible(nom, adresseRecouvrement);
+            ApplicationCible cible = new ApplicationCible(nom);
 
-            // ✅ Envoi d'un message de test après connexion
+            // Envoi d'un message de test après connexion
             cible.envoyerMessage("Hello depuis " + nom + " !");
         } catch (Exception e) {
-            System.err.println("Erreur démarrage ApplicationCible: " + e.getMessage());
+            System.err.println("[ERREUR] Problème lors du démarrage : " + e.getMessage());
         }
     }
 }

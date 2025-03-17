@@ -27,81 +27,66 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
     }
 
     public void chargerVoisins() {
-        try {
-            JSONParser parser = new JSONParser();
-            JSONObject reseau = (JSONObject) parser.parse(new FileReader("reseau.json"));
-            JSONObject recouvrements = (JSONObject) reseau.get("recouvrements");
-            JSONObject config = (JSONObject) recouvrements.get(nom);
+    new Thread(() -> {
+        while (true) {  
+            try {
+                JSONParser parser = new JSONParser();
+                JSONObject reseau = (JSONObject) parser.parse(new FileReader("reseau.json"));
+                JSONObject recouvrements = (JSONObject) reseau.get("recouvrements");
+                JSONObject config = (JSONObject) recouvrements.get(nom);
 
-            if (config != null) {
-                JSONObject voisinsConfig = (JSONObject) config.get("voisins");
+                if (config != null) {
+                    JSONObject voisinsConfig = (JSONObject) config.get("voisins");
 
-            for (Object key : voisinsConfig.keySet()) {
-                String voisinNom = (String) key;
-                String voisinIP = null;
+                    for (Object key : voisinsConfig.keySet()) {
+                        String voisinNom = (String) key;
+                        String voisinIP = null;
 
-                System.out.println("[DEBUG] Vérification du voisin : " + voisinNom);
+                        // // Vérifier si le voisin est un recouvrement
+                        // if (recouvrements.containsKey(voisinNom)) {
+                        //     voisinIP = (String) ((JSONObject) recouvrements.get(voisinNom)).get("adresse");
+                        // }
 
-                // Vérifier si le voisin est un recouvrement
-                if (recouvrements.containsKey(voisinNom)) {
-                    System.out.println("[DEBUG] " + voisinNom + " est un recouvrement.");
-                    JSONObject voisinConfig = (JSONObject) recouvrements.get(voisinNom);
-                    
-                    if (voisinConfig == null) {
-                        System.err.println("[ERREUR] voisinConfig est NULL pour " + voisinNom);
-                        continue;
-                    }
+                        
 
-                    voisinIP = (String) voisinConfig.get("adresse");
 
-                    if (voisinIP == null) {
-                        System.err.println("[ERREUR] Impossible de récupérer l'adresse de " + voisinNom);
-                    }
-                }
-                // Vérifier si le voisin est une application cible
-                else if (reseau.containsKey("applications_cibles")) {
-                    JSONObject applicationsCibles = (JSONObject) reseau.get("applications_cibles");
-
-                    if (applicationsCibles == null) {
-                        System.err.println("[ERREUR] La section applications_cibles est NULL !");
-                        continue;
-                    }
-
-                    if (applicationsCibles.containsKey(voisinNom)) {
-                        System.out.println("[DEBUG] " + voisinNom + " est une application cible.");
-                        voisinIP = (String) applicationsCibles.get(voisinNom);
-
-                        if (voisinIP == null) {
-                            System.err.println("[ERREUR] Impossible de récupérer l'adresse de " + voisinNom + " dans applications_cibles.");
+                        // Vérifier si déjà connecté
+                       if (recouvrements.containsKey(voisinNom)) {
+                            // C'est un recouvrement → On cherche dans le registre RMI
+                            voisinIP = (String) ((JSONObject) recouvrements.get(voisinNom)).get("adresse");
+                            System.out.println("[DEBUG] " + voisinNom + " est un recouvrement.");
+                            
+                            try {
+                                System.out.println("[DEBUG] " + nom + " tente de se connecter à " + voisinNom + " via RMI...");
+                                RmiNodeInterface voisin = (RmiNodeInterface) Naming.lookup("//" + voisinIP + "/" + voisinNom);
+                                voisins.put(voisinNom, voisin);
+                                System.out.println("[SUCCESS] " + nom + " est connecté à " + voisinNom + " !");
+                            } catch (Exception e) {
+                                System.err.println("[ERREUR] Impossible de se connecter à " + voisinNom + " : " + e.getMessage());
+                            }
+                        }
+                        else if (reseau.containsKey("applications_cibles")) {
+                            JSONObject applicationsCibles = (JSONObject) reseau.get("applications_cibles");
+                            if (applicationsCibles.containsKey(voisinNom)) {
+                                voisinIP = (String) applicationsCibles.get(voisinNom);
+                                System.out.println("[DEBUG] " + voisinNom + " est une application cible.");
+                            }
+                        } else {
+                            System.err.println("[ERREUR] " + voisinNom + " n'existe ni dans recouvrements ni dans applications_cibles !");
+                            continue;
                         }
                     }
-                } else {
-                    System.err.println("[ERREUR] " + voisinNom + " n'existe ni dans recouvrements ni dans applications_cibles !");
                 }
 
-                if (voisinIP == null) {
-                    System.err.println("[ERREUR] " + nom + " : Impossible de trouver l'IP de " + voisinNom);
-                    continue;
-                }
-
-                System.out.println("[INFO] " + nom + " a pour voisin : " + voisinNom + " @ " + voisinIP);
-
-                try {
-                    System.out.println("[DEBUG] " + nom + " tente de se connecter à " + voisinNom + " via RMI...");
-                    RmiNodeInterface voisin = (RmiNodeInterface) Naming.lookup("//" + voisinIP + "/" + voisinNom);
-                    voisins.put(voisinNom, voisin);
-                    System.out.println("[SUCCESS] " + nom + " est connecté à " + voisinNom + " !");
-                } catch (Exception e) {
-                    System.err.println("[ERREUR] Impossible de se connecter à " + voisinNom + " : " + e.getMessage());
-                }
+                // 🕒 Attendre 5 secondes avant de réessayer
+                Thread.sleep(5000);
+            } catch (Exception e) {
+                System.err.println("[ERREUR] Problème lors de la découverte des voisins : " + e.getMessage());
             }
-
-
-            }
-        } catch (Exception e) {
-            System.err.println("[ERREUR] Impossible de charger le fichier JSON : " + e.getMessage());
         }
-    }
+    }).start(); // Lancer la boucle de reconnexion en parallèle
+}
+
 
     public void recevoirMessage(String source, String messageId, int ttl, String contenu) throws RemoteException {
         if (messagesRecus.contains(messageId) || ttl <= 0) {

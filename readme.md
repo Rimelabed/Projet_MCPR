@@ -125,4 +125,16 @@ Waiting a second for TPM socket to be ready.
 AppRecouv_3 started!
 elhadjibadji@oscar:~/_PROJET_MCPR$
 
+#### AppCible_3
 
+AppCible_3.qcow2 already exists!
+Starting AppCible_3...
+Waiting a second for TPM socket to be ready.
+~> Virtual machine filename   : AppCible_3.qcow2
+~> RAM size                   : 1024MB
+~> SPICE VDI port number      : 6116
+~> telnet console port number : 2516
+~> MAC address                : b8:ad:ca:fe:00:d8
+~> Switch port interface      : tap216, access mode
+~> IPv6 LL address            : fe80::baad:caff:fefe:d8%vlan60
+AppCible_3 started!

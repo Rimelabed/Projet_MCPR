@@ -46,6 +46,51 @@ Les applications de recouvrement se chargent de recevoir les messages et de les 
 
 ## Configuration
 
+``` diff
+Host AppRecouv_2
+    AddressFamily inet6
+    Hostname 2001:678:3fc:3c:baad:caff:fefe:d6
+    User etu
+    Port 2222
+    ForwardAgent yes
+
+Host AppRecouv_3
+    AddressFamily inet6
+    Hostname 2001:678:3fc:3c:baad:caff:fefe:d7
+    User etu
+    Port 2222
+    ForwardAgent yes
+
+Host AppRecouv_1
+    AddressFamily inet6
+    HostName 2001:678:3fc:3c:baad:caff:fefe:a9
+    User etu
+    Port 2222
+    ForwardAgent yes
+
+Host AppCible_3
+    AddressFamily inet6
+    HostName 2001:678:3fc:3c:baad:caff:fefe:d8
+    User etu
+    Port 2222
+    ForwardAgent yes
+
+Host AppCible_1
+    AddressFamily inet6
+    HostName 2001:678:3fc:3c:baad:caff:fefe:a0
+    User etu
+    Port 2222
+    ForwardAgent yes
+
+Host AppCible_2
+    AddressFamily inet6
+    HostName 2001:678:3fc:3c:baad:caff:fefe:a1
+    User etu
+    Port 2222
+    ForwardAgent yes
+    
+```
+
 Modifiez le fichier `reseau.json` pour refléter votre configuration réseau. Exemple :
 
 ```json

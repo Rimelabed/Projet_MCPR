@@ -1,140 +1,161 @@
-# Réseau de Recouvrement avec Java RMI
-### 1️⃣ Présentation du Projet
-Ce projet met en place un réseau de recouvrement permettant la communication entre deux applications cibles (AppCible_1 et AppCible_2) via un nœud de recouvrement (AppRecouv_1). L’implémentation repose sur Java RMI, facilitant l’échange de messages entre ces applications sur un réseau distribué.
+# MCPR - Projet Overlay
+## Étape 3 : Diffusion et Réception de Contenu
 
-L'objectif est de structurer un réseau où les applications cibles ne communiquent pas directement entre elles, mais passent obligatoirement par un serveur intermédiaire (AppRecouv_1), qui assure le routage des messages.
+Ce projet vise à créer une application distribuée permettant de diffuser des messages courts via un réseau de recouvrement. Dans cette étape, les **applications cibles** (clients) sont capables d'envoyer et de recevoir des messages via des **applications de recouvrement** (nœuds de routage), en utilisant RMI pour la communication.
 
-### 2️⃣ Infrastructure et Configuration des Machines
-Les machines utilisées sont connectées à l’infrastructure de l’école et accessibles en SSH via IPv6.
-
-**📌 Ajout dans le fichier ~/.ssh/config pour faciliter les connexions :**
-
-``` text
-Host AppRecouv_1
-    AddressFamily inet6
-    HostName 2001:678:3fc:3c:baad:caff:fefe:a9
-    User etu
-    Port 2222
-    ForwardAgent yes
-
-Host AppCible_1
-    AddressFamily inet6
-    HostName 2001:678:3fc:3c:baad:caff:fefe:a0
-    User etu
-    Port 2222
-    ForwardAgent yes
-
-Host AppCible_2
-    AddressFamily inet6
-    HostName 2001:678:3fc:3c:baad:caff:fefe:a1
-    User etu
-    Port 2222
-    ForwardAgent yes
-
-```
-
-📌 Avec cette configuration, on peut se connecter facilement à chaque machine avec :
-
-``` bash
-ssh AppRecouv_1
-ssh AppCible_1
-ssh AppCible_2
-```
-### 3️⃣ Organisation des Fichiers
-Les fichiers sont distribués sur trois machines virtuelles. Chaque machine a les fichiers nécessaires à son rôle. Tous situés dans le répertoire `_PROJET_MCPR` 
-
-### 4️⃣ Compilation
-Chaque machine doit compiler les fichiers nécessaires avant l'exécution.
-**Sur `AppRecouv_1` qui est le serveur RMI en passant :**
-``` bash
-javac RmiNodeInterface.java
-javac ApplicationRecouvrement.java
-javac MainServeur.java
-```
-
-**📌 Sur AppCible_1 et AppCible_2 (Applications Cibles)**
-
-``` bash
-javac RmiNodeInterface.java
-javac ApplicationCible.java
-```
-### 5️⃣ Exécution des Applications
-📌 Les applications doivent être démarrées dans l’ordre suivant : 
-
-**1️⃣ Démarrer Rec1 (Serveur RMI) sur AppRecouv_1**
-
-``` bash
-ssh AppRecouv_1
-java MainServeur
-```
-**Résultat attendu :**
-
-``` bash 
-Serveur RMI prêt !
-```
-
-**2️⃣ Démarrer AppCible_1**
-
-``` bash
-java ApplicationCible <NomApp> <IPAppRecouvrement> <IPAppCible1>
-```
-
-Même syntaxe pour Appcible2, seul l'ip change. Dans notre infra, ils ont tous les deux le même app de recouvrement.
-
-### 6️⃣ Explication du Code
-
-**📌 ApplicationRecouvrement.java**
-Ce fichier représente le serveur RMI (Rec1).
-Il reçoit les messages envoyés par AppCible_1 ou AppCible_2, puis les retransmet à l’autre cible.
-
-**📌 ApplicationCible.java**
-Chaque Application Cible contacte Rec1 et envoie un message.
-Rec1 s’occupe de relayer le message à l’autre ApplicationCible.
-
-**📌 RmiNodeInterface.java**
-Interface partagée entre toutes les machines définissant les méthodes RMI utilisées pour envoyer des messages.
+Ce README détaille comment configurer, compiler, exécuter et tester l'étape 3 de votre projet.
 
 ---
 
-### Nouveau réseau pour finaliser la version2
+## Table des Matières
+- [Introduction](#introduction)
+- [Prérequis](#prérequis)
+- [Configuration](#configuration)
+- [Compilation](#compilation)
+- [Exécution](#exécution)
+  - [Lancer une Application de Recouvrement](#lancer-une-application-de-recouvrement)
+  - [Lancer une Application Cible](#lancer-une-application-cible)
+- [Menu Interactif et Tests](#menu-interactif-et-tests)
+- [Dépannage](#dépannage)
+- [Prochaines Étapes](#prochaines-étapes)
 
-#### AppRecouv_2
-Starting AppRecouv_2...
-Waiting a second for TPM socket to be ready.
-~> Virtual machine filename   : AppRecouv_2.qcow2
-~> RAM size                   : 2048MB
-~> SPICE VDI port number      : 6114
-~> telnet console port number : 2514
-~> MAC address                : b8:ad:ca:fe:00:d6
-~> Switch port interface      : tap214, access mode
-~> IPv6 LL address            : fe80::baad:caff:fefe:d6%vlan60
-AppRecouv_2 started!
+---
 
-#### AppRecouv_3
-elhadjibadji@oscar:~/_PROJET_MCPR$ $HOME/masters/scripts/lab-startup.py lab3.yaml
-AppRecouv_3.qcow2 already exists!
-Starting AppRecouv_3...
-Waiting a second for TPM socket to be ready.
-~> Virtual machine filename   : AppRecouv_3.qcow2
-~> RAM size                   : 2048MB
-~> SPICE VDI port number      : 6115
-~> telnet console port number : 2515
-~> MAC address                : b8:ad:ca:fe:00:d7
-~> Switch port interface      : tap215, access mode
-~> IPv6 LL address            : fe80::baad:caff:fefe:d7%vlan60
-AppRecouv_3 started!
-elhadjibadji@oscar:~/_PROJET_MCPR$
+## Introduction
 
-#### AppCible_3
+Le projet MCPR consiste à développer une solution de diffusion de messages courts reposant sur un réseau d'applications de recouvrement et d'applications cibles.  
+Dans **l'étape 3**, chaque application cible :
+- S'enregistre dans le registre RMI.
+- Se connecte à une application de recouvrement (déterminée à partir du fichier de configuration `reseau.json`).
+- Possède un menu interactif permettant de tester la connexion et d'envoyer des messages personnalisés.
 
-AppCible_3.qcow2 already exists!
-Starting AppCible_3...
-Waiting a second for TPM socket to be ready.
-~> Virtual machine filename   : AppCible_3.qcow2
-~> RAM size                   : 1024MB
-~> SPICE VDI port number      : 6116
-~> telnet console port number : 2516
-~> MAC address                : b8:ad:ca:fe:00:d8
-~> Switch port interface      : tap216, access mode
-~> IPv6 LL address            : fe80::baad:caff:fefe:d8%vlan60
-AppCible_3 started!
+Les applications de recouvrement se chargent de recevoir les messages et de les propager vers les cibles concernées.
+
+---
+
+## Prérequis
+
+- **JDK 8 ou supérieur** : Assurez-vous d'avoir une version récente de Java.
+- **Accès au Port 1099** : Le RMI Registry doit être accessible (vérifiez que le port 1099 n'est pas bloqué par un pare-feu).
+- **Configuration Réseau** : Un fichier `reseau.json` correctement configuré pour décrire la topologie du réseau.
+- **Environnement de Développement** : VSCode, Eclipse, ou tout autre IDE.
+
+---
+
+---
+
+## Configuration
+
+Modifiez le fichier `reseau.json` pour refléter votre configuration réseau. Exemple :
+
+```json
+{
+  "recouvrements": {
+    "AppRecouv_1": {
+      "adresse": "198.18.61.169",
+      "voisins": {
+        "AppRecouv_2": 1,
+        "AppRecouv_3": 1
+      }
+    },
+    "AppRecouv_2": {
+      "adresse": "198.18.60.238",
+      "voisins": {
+        "AppRecouv_1": 1,
+        "AppCible_3": 1
+      }
+    },
+    "AppRecouv_3": {
+      "adresse": "198.18.60.239",
+      "voisins": {
+        "AppRecouv_1": 1,
+        "AppCible_1": 1,
+        "AppCible_2": 1
+      }
+    }
+  },
+  "applications_cibles": {
+    "AppCible_1": "198.18.61.160",
+    "AppCible_2": "198.18.61.161",
+    "AppCible_3": "198.18.60.245"
+  }
+}
+
+```
+
+## Compilation
+Compilez l'ensemble des fichiers Java depuis le répertoire du projet :
+``` bash
+javac *.java
+```
+
+
+## Exécution
+Lancer une Application de Recouvrement
+Sur la machine prévue pour le recouvrement, lancez l'application via le MainServeur. Par exemple :
+
+``` bash
+java MainServeur AppRecouv_1
+``` 
+
+Ce lancement :
+
+Charge la configuration réseau depuis reseau.json.
+Crée un registre RMI (port 1099).
+Enregistre l'objet de recouvrement dans le registre.
+Vous pouvez lancer d'autres recouvrements en passant le nom approprié (AppRecouv_2, AppRecouv_3, etc.) sur d'autres machines ou dans des fenêtres séparées.
+
+Lancer une Application Cible
+Sur la machine destinée à être une cible, lancez l'application cible. Par exemple :
+
+``` bash
+java ApplicationCible AppCible_1
+``` 
+
+Cela fera en sorte que :
+
+-L'application cible charge le fichier reseau.json pour déterminer à quel recouvrement elle doit se connecter.
+-Elle crée un registre RMI local et s'enregistre avec son nom.
+-Une fois enregistrée, elle se connecte au recouvrement approprié et envoie un message de test.
+
+## Menu Interactif et Tests
+Après l'exécution, l'application cible affiche un menu interactif, par exemple :
+``` csharp
+[INFO] AppCible_1 est associé à AppRecouv_3 @ 198.18.60.239
+[DEBUG] AppCible_1 tente de se connecter à AppRecouv_3 via RMI...
+[SUCCESS] AppCible_1 est connecté à AppRecouv_3 !
+[INFO] AppCible_1 enregistré dans le registre RMI.
+Hello depuis AppCible_1 !
+
+```
+
+Puis, le menu : 
+
+``` diff
+=== Menu de AppCible_1 ===
+1. Tester la connexion avec le réseau
+2. Envoyer un message court personnalisé
+0. Quitter
+Votre choix :
+```
+
+Option 1 : Envoie un message de test pour vérifier la connexion avec le réseau.
+Option 2 : Permet de saisir un message personnalisé qui sera transmis via le recouvrement.
+Option 0 : Quitte l'application.
+Testez les fonctionnalités en choisissant différentes options et vérifiez que :
+
+Le message de test ou personnalisé est bien envoyé.
+Les autres cibles et les recouvrements affichent les logs indiquant la réception du message.
+
+## Dépannage :
+
+- Port RMI : Assurez-vous que le port 1099 est libre et accessible sur chaque machine.
+- Configuration reseau.json : Vérifiez que le fichier est correctement formaté et que les adresses IP correspondent à votre environnement.
+- Logs : Utilisez les messages [DEBUG], [INFO] et [ERREUR] affichés dans la console pour diagnostiquer d'éventuels problèmes de connexion ou d'enregistrement.
+
+## Prochaines Étapes
+- **Diffusion Restreinte** : Pour l'étape 4, nous allons ajouter des attributs (ex : groupe ou caractéristiques) à chaque application cible et modifier la logique de diffusion pour qu'elle ne s'adresse qu'aux cibles concernées.Peut être en modifiant directement le fichier de topologie reseau.json ?
+
+- **Optimisation du Routage** : Nous allons également explorer des mécanismes de filtrage inspirés des algorithmes de multicast (par exemple, reverse path broadcasting) pour optimiser la diffusion.
+
+- **Interface Utilisateur Améliorée** : Tenter d'enrichir le menu interactif pour offrir plus d'options de test ou de configuration.

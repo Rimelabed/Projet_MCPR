@@ -15,12 +15,15 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
     private Map<String, RmiNodeInterface> voisins;
     private TableRoutage tableRoutage;
     private Set<String> messagesRecus;
+    private Map<String, RmiNodeInterface> applicationsCibles;
+
 
     public ApplicationRecouvrement(String nom, String adresse) throws RemoteException {
         super();
         this.nom = nom;
         this.adresse = adresse;
         this.voisins = new HashMap<>();
+        this.applicationsCibles = new HashMap<>();
         this.tableRoutage = new TableRoutage();
         this.messagesRecus = new HashSet<>();
         //chargerVoisins();
@@ -66,12 +69,21 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
                             }
                         }
                         else if (reseau.containsKey("applications_cibles")) {
-                            JSONObject applicationsCibles = (JSONObject) reseau.get("applications_cibles");
-                            if (applicationsCibles.containsKey(voisinNom)) {
-                                voisinIP = (String) applicationsCibles.get(voisinNom);
+                            JSONObject ciblesConfig = (JSONObject) reseau.get("applications_cibles");
+                            if (ciblesConfig.containsKey(voisinNom)) {
+                                voisinIP = (String) ciblesConfig.get(voisinNom);
                                 System.out.println("[DEBUG] " + voisinNom + " est une application cible.");
+                                try {
+                                    // Récupération de l'instance distante de la cible via RMI
+                                    RmiNodeInterface cible = (RmiNodeInterface) Naming.lookup("//" + voisinIP + "/" + voisinNom);
+                                    this.applicationsCibles.put(voisinNom, cible);
+                                    System.out.println("[SUCCESS] " + voisinNom + " est maintenant connu de " + nom);
+                                } catch (Exception e) {
+                                    System.err.println("[ERREUR] Impossible d'ajouter l'application cible " + voisinNom + " : " + e.getMessage());
+                                }
                             }
-                        } else {
+                        }                        
+                         else {
                             System.err.println("[ERREUR] " + voisinNom + " n'existe ni dans recouvrements ni dans applications_cibles !");
                             continue;
                         }
@@ -94,12 +106,22 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
         }
         messagesRecus.add(messageId);
         System.out.println("[Recouvrement " + nom + "] Message reçu de " + source + " : " + contenu + " (TTL=" + ttl + ")");
+
+        // Propager aux autres recouvrements
         for (String voisin : voisins.keySet()) {
             if (!voisin.equals(source)) {
                 voisins.get(voisin).recevoirMessage(this.nom, messageId, ttl - 1, contenu);
             }
         }
+
+        // Envoyer aussi aux applications cibles
+        for (String cible : applicationsCibles.keySet()) {
+            if (!cible.equals(source)) {
+                applicationsCibles.get(cible).recevoirMessage(this.nom, messageId, ttl - 1, contenu);
+            }
+        }
     }
+
 
     public void recevoirTableRoutage(String source, Map<String, Integer> nouvellesRoutes) throws RemoteException {
         boolean modifie = false;

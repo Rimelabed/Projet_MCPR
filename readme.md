@@ -1,52 +1,49 @@
 # MCPR - Projet Overlay
-## Étape 3 : Diffusion et Réception de Contenu
+## Étape 4 : Diffusion Restreinte par Groupes
 
-Ce projet vise à créer une application distribuée permettant de diffuser des messages courts via un réseau de recouvrement. Dans cette étape, les **applications cibles** (clients) sont capables d'envoyer et de recevoir des messages via des **applications de recouvrement** (nœuds de routage), en utilisant RMI pour la communication.
-
-Ce README détaille comment configurer, compiler, exécuter et tester l'étape 3 de votre projet.
+Cette étape introduit la diffusion restreinte, c’est-à-dire que les messages ne sont envoyés qu’aux applications cibles appartenant à un groupe spécifique. L’objectif est d’éviter une diffusion totale du message et de limiter la propagation uniquement aux cibles intéressées (par exemple, groupe "ventes", "RH", etc.).
 
 ---
 
 ## Table des Matières
+
 - [Introduction](#introduction)
 - [Prérequis](#prérequis)
-- [Configuration](#configuration)
-- [Compilation](#compilation)
-- [Exécution](#exécution)
-  - [Lancer une Application de Recouvrement](#lancer-une-application-de-recouvrement)
-  - [Lancer une Application Cible](#lancer-une-application-cible)
-- [Menu Interactif et Tests](#menu-interactif-et-tests)
-- [Dépannage](#dépannage)
-- [Prochaines Étapes](#prochaines-étapes)
+- [Nouvelle Topologie JSON](#nouvelle-topologie-json)
+- [Modifications du Code](#modifications-du-code)
+  - [Classe CibleInfo](#classe-cibleinfo)
+  - [ApplicationRecouvrement](#applicationrecouvrement)
+  - [ApplicationCible](#applicationcible)
+- [Compilation et Exécution](#compilation-et-ex%C3%A9cution)
+- [Tutoriel de Test](#tutoriel-de-test)
+- [Dépannage](#d%C3%A9pannage)
+- [Prochaines Étapes](#prochaines-%C3%A9tapes)
 
 ---
 
 ## Introduction
 
-Le projet MCPR consiste à développer une solution de diffusion de messages courts reposant sur un réseau d'applications de recouvrement et d'applications cibles.  
-Dans **l'étape 3**, chaque application cible :
-- S'enregistre dans le registre RMI.
-- Se connecte à une application de recouvrement (déterminée à partir du fichier de configuration `reseau.json`).
-- Possède un menu interactif permettant de tester la connexion et d'envoyer des messages personnalisés.
-
-Les applications de recouvrement se chargent de recevoir les messages et de les propager vers les cibles concernées.
+Dans cette étape, nous restreignons la diffusion des messages aux applications cibles qui appartiennent à un groupe particulier.  
+Pour cela, nous :
+- **Mettons à jour le fichier de configuration JSON** pour y inclure un attribut `"groupe"` pour chaque application cible.
+- **Créons une nouvelle classe `CibleInfo`** pour stocker la référence distante et le groupe de chaque cible.
+- **Modifions l'application de recouvrement** pour qu'elle filtre les messages en fonction du groupe indiqué dans le message.
+- **Adaptation de l'interface utilisateur** dans l'application cible pour permettre à l'utilisateur d'envoyer un message ciblé sur un groupe spécifique.
 
 ---
 
 ## Prérequis
 
-- **JDK 8 ou supérieur** : Assurez-vous d'avoir une version récente de Java.
-- **Accès au Port 1099** : Le RMI Registry doit être accessible (vérifiez que le port 1099 n'est pas bloqué par un pare-feu).
-- **Configuration Réseau** : Un fichier `reseau.json` correctement configuré pour décrire la topologie du réseau.
-- **Environnement de Développement** : VSCode, Eclipse, ou tout autre IDE.
+- **JDK 8 ou supérieur**  
+- **Accès au port 1099** pour le registre RMI  
+- **Configuration correcte** du fichier `reseau.json`  
+- **Connaissance de base de RMI et JSON**
 
 ---
 
----
+## Nouvelle Topologie JSON
 
-## Configuration
-
-Modifiez le fichier `reseau.json` pour refléter votre configuration réseau. Exemple :
+Le fichier `reseau.json` est modifié pour intégrer les informations de groupe pour les applications cibles. Voici un exemple de configuration mise à jour :
 
 ```json
 {
@@ -75,87 +72,78 @@ Modifiez le fichier `reseau.json` pour refléter votre configuration réseau. Ex
     }
   },
   "applications_cibles": {
-    "AppCible_1": "198.18.61.160",
-    "AppCible_2": "198.18.61.161",
-    "AppCible_3": "198.18.60.245"
+    "AppCible_1": { "adresse": "198.18.61.160", "groupe": "ventes" },
+    "AppCible_2": { "adresse": "198.18.61.161", "groupe": "RH" },
+    "AppCible_3": { "adresse": "198.18.60.245", "groupe": "ventes" }
   }
 }
-
 ```
 
-## Compilation
-Compilez l'ensemble des fichiers Java depuis le répertoire du projet :
-``` bash
-javac *.java
+Chaque application cible a désormais une adresse et un attribut "groupe" indiquant son appartenance.
+
+## Modifications du Code
+
+### Classe CibleInfo 
+
+Création d'un fichier CibleInfo.java qui encapsule la référence RMI et le groupe de l’application cible :
+
+``` java
+
+public class CibleInfo {
+    private RmiNodeInterface cible;
+    private String groupe;
+
+    public CibleInfo(RmiNodeInterface cible, String groupe) {
+        this.cible = cible;
+        this.groupe = groupe;
+    }
+
+    public RmiNodeInterface getCible() {
+        return cible;
+    }
+
+    public String getGroupe() {
+        return groupe;
+    }
+}
 ```
 
+### ApplicationRecouvrement
+1. Modification de la découverte des cibles
+    Dans la méthode qui parcourt le JSON pour trouver les applications cibles, on récupère l'objet JSON spécifique à chaque cible afin d'extraire à la fois "adresse" et "groupe". 
+2. Filtrage lors de la diffusion des messages
+    Dans la méthode `recevoirMessage`, on vérifie si le contenu du message contient un préfixe indiquant le groupe ciblé. Si oui, on extrait ce groupe et le message n'est diffusé qu'aux cibles dont l'attribut "groupe" correspond.
 
-## Exécution
-Lancer une Application de Recouvrement
-Sur la machine prévue pour le recouvrement, lancez l'application via le MainServeur. Par exemple :
+### ApplicationCible
 
-``` bash
-java MainServeur AppRecouv_1
-``` 
+1. Mise à jour du menu interactif
+    Dans la boucle du menu, on demande à l’utilisateur de saisir un groupe cible pour une diffusion restreinte. Si l'utilisateur fournit un groupe, le message est préfixé avec "group:<nomDuGroupe>;".
+2. Méthode d'envoi 
+    La méthode `envoyerMessage` reste inchangée, elle envoie simplement le message tel qu'il est fourni. Le préfixe sera interprété par les recouvrements.
 
-Ce lancement :
+## Compilation et exécution
 
-Charge la configuration réseau depuis reseau.json.
-Crée un registre RMI (port 1099).
-Enregistre l'objet de recouvrement dans le registre.
-Vous pouvez lancer d'autres recouvrements en passant le nom approprié (AppRecouv_2, AppRecouv_3, etc.) sur d'autres machines ou dans des fenêtres séparées.
+Rien de changé.
 
-Lancer une Application Cible
-Sur la machine destinée à être une cible, lancez l'application cible. Par exemple :
+## Tutoriel de test
 
-``` bash
-java ApplicationCible AppCible_1
-``` 
+1. Vérifiez la configuration :
+Assurez-vous que le fichier reseau.json contient bien les adresses et groupes.
 
-Cela fera en sorte que :
+2. Démarrez les recouvrements :
+Lancer les instances des applications de recouvrement sur les machines ou terminaux appropriés.
 
--L'application cible charge le fichier reseau.json pour déterminer à quel recouvrement elle doit se connecter.
--Elle crée un registre RMI local et s'enregistre avec son nom.
--Une fois enregistrée, elle se connecte au recouvrement approprié et envoie un message de test.
+3. Démarrez les applications cibles :
+Lancez chaque application cible. Chaque cible va s'enregistrer dans le registre RMI et se connecter au recouvrement défini dans reseau.json.
 
-## Menu Interactif et Tests
-Après l'exécution, l'application cible affiche un menu interactif, par exemple :
-``` csharp
-[INFO] AppCible_1 est associé à AppRecouv_3 @ 198.18.60.239
-[DEBUG] AppCible_1 tente de se connecter à AppRecouv_3 via RMI...
-[SUCCESS] AppCible_1 est connecté à AppRecouv_3 !
-[INFO] AppCible_1 enregistré dans le registre RMI.
-Hello depuis AppCible_1 !
+4. Utilisez le menu interactif de l'application cible :
+    - Option 1 : Envoyer un message de test (diffusion totale) et observer dans les logs des recouvrements et des autres cibles que le message est reçu.
+    - Option 2 : Saisir un groupe cible (par exemple, "ventes" ou "RH") et un message personnalisé. Seules les applications cibles appartenant à ce groupe devraient recevoir le message.
+    - Vérifiez les logs : Les recouvrements doivent afficher le message avec le préfixe de groupe et transmettre uniquement aux cibles correspondantes.
 
-```
+## NB 
+N'hésitez pas à augmenter le délai de tentative de reconnexion entre les applications de recouvrement lorsque ces derniers ne sont pas tous allumés, pour éviter d'avoir toutes les cinq secondes des logs d'erreurs.
 
-Puis, le menu : 
+## Suggestion : 
 
-``` diff
-=== Menu de AppCible_1 ===
-1. Tester la connexion avec le réseau
-2. Envoyer un message court personnalisé
-0. Quitter
-Votre choix :
-```
-
-Option 1 : Envoie un message de test pour vérifier la connexion avec le réseau.
-Option 2 : Permet de saisir un message personnalisé qui sera transmis via le recouvrement.
-Option 0 : Quitte l'application.
-Testez les fonctionnalités en choisissant différentes options et vérifiez que :
-
-Le message de test ou personnalisé est bien envoyé.
-Les autres cibles et les recouvrements affichent les logs indiquant la réception du message.
-
-## Dépannage :
-
-- Port RMI : Assurez-vous que le port 1099 est libre et accessible sur chaque machine.
-- Configuration reseau.json : Vérifiez que le fichier est correctement formaté et que les adresses IP correspondent à votre environnement.
-- Logs : Utilisez les messages [DEBUG], [INFO] et [ERREUR] affichés dans la console pour diagnostiquer d'éventuels problèmes de connexion ou d'enregistrement.
-
-## Prochaines Étapes
-- **Diffusion Restreinte** : Pour l'étape 4, nous allons ajouter des attributs (ex : groupe ou caractéristiques) à chaque application cible et modifier la logique de diffusion pour qu'elle ne s'adresse qu'aux cibles concernées.Peut être en modifiant directement le fichier de topologie reseau.json ?
-
-- **Optimisation du Routage** : Nous allons également explorer des mécanismes de filtrage inspirés des algorithmes de multicast (par exemple, reverse path broadcasting) pour optimiser la diffusion.
-
-- **Interface Utilisateur Améliorée** : Tenter d'enrichir le menu interactif pour offrir plus d'options de test ou de configuration.
+Différencier les messages provenant des cibles avec une coloration sur le terminal, par exemple. Faire de même pour les messages de logs (DEBUG en jaune, SUCCESS en vert, ERROR en rouge et Messages en bleu...)

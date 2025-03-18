@@ -1,31 +1,32 @@
 {
     "recouvrements": {
-        "AppRecouv_1": {
-            "adresse": "198.18.61.169",
-            "voisins": {
-                "AppRecouv_2": 1,
-                "AppRecouv_3": 1
-            }
-        },
-        "AppRecouv_2": {
-            "adresse": "198.18.60.238",
-            "voisins": {
-                "AppRecouv_1": 1,
-                "AppCible_3": 1
-            }
-        },
-        "AppRecouv_3": {
-            "adresse": "198.18.60.239",
-            "voisins": {
-                "AppRecouv_1": 1,
-                "AppCible_1": 1,
-                "AppCible_2": 1
-            }
+      "AppRecouv_1": {
+        "adresse": "198.18.61.169",
+        "voisins": {
+          "AppRecouv_2": 1,
+          "AppRecouv_3": 1
         }
+      },
+      "AppRecouv_2": {
+        "adresse": "198.18.60.238",
+        "voisins": {
+          "AppRecouv_1": 1,
+          "AppCible_3": 1
+        }
+      },
+      "AppRecouv_3": {
+        "adresse": "198.18.60.239",
+        "voisins": {
+          "AppRecouv_1": 1,
+          "AppCible_1": 1,
+          "AppCible_2": 1
+        }
+      }
     },
     "applications_cibles": {
-        "AppCible_1": "198.18.61.160",
-        "AppCible_2": "198.18.61.161",
-        "AppCible_3": "198.18.60.245"
+      "AppCible_1": { "adresse": "198.18.61.160", "groupe": "ventes" },
+      "AppCible_2": { "adresse": "198.18.61.161", "groupe": "ventes" },
+      "AppCible_3": { "adresse": "198.18.60.245", "groupe": "RH" }
     }
-}
+  }
+  

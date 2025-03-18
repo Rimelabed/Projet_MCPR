@@ -113,31 +113,35 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
             // Envoi d'un message de test après connexion
             // cible.envoyerMessage("Hello depuis " + nom + " !");
              // Menu interactif
-            Scanner scanner = new Scanner(System.in);
-            while (true) {
-                System.out.println("\n=== Menu de " + nom + " ===");
-                System.out.println("1. Tester la connexion avec le réseau");
-                System.out.println("2. Envoyer un message court personnalisé");
-                System.out.println("0. Quitter");
-                System.out.print("Votre choix : ");
-                String choix = scanner.nextLine();
-
-                if (choix.equals("1")) {
-                    // Option 1 : Envoyer un message de test
-                    cible.envoyerMessage("Message de test de connexion de " + nom);
-                } else if (choix.equals("2")) {
-                    // Option 2 : Envoyer un message personnalisé
-                    System.out.print("Entrez votre message : ");
-                    String message = scanner.nextLine();
-                    cible.envoyerMessage(message + " de : " + nom);
-                } else if (choix.equals("0")) {
-                    System.out.println("Fermeture de l'application.");
-                    break;
-                } else {
-                    System.out.println("Choix invalide. Veuillez réessayer.");
-                }
-            }
-            scanner.close();
+             Scanner scanner = new Scanner(System.in);
+             while (true) {
+                 System.out.println("\n=== Menu de " + nom + " ===");
+                 System.out.println("1. Tester la connexion avec le réseau");
+                 System.out.println("2. Envoyer un message court personnalisé");
+                 System.out.println("0. Quitter");
+                 System.out.print("Votre choix : ");
+                 String choix = scanner.nextLine();
+             
+                 if (choix.equals("1")) {
+                     cible.envoyerMessage("Message de test de connexion de " + nom);
+                 } else if (choix.equals("2")) {
+                     System.out.print("Entrez le groupe cible (laisser vide pour diffusion totale) : ");
+                     String groupeCible = scanner.nextLine().trim();
+                     System.out.print("Entrez votre message : ");
+                     String message = scanner.nextLine();
+                     if (!groupeCible.isEmpty()) {
+                         // Préfixer le message par l'information de groupe
+                         message = "group:" + groupeCible + ";" + message;
+                     }
+                     cible.envoyerMessage(message);
+                 } else if (choix.equals("0")) {
+                     System.out.println("Fermeture de l'application.");
+                     break;
+                 } else {
+                     System.out.println("Choix invalide. Veuillez réessayer.");
+                 }
+             }
+             scanner.close();
 
         } catch (Exception e) {
             System.err.println("[ERREUR] Problème lors du démarrage : " + e.getMessage());

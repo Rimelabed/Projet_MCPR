@@ -15,7 +15,7 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
     private Map<String, RmiNodeInterface> voisins;
     private TableRoutage tableRoutage;
     private Set<String> messagesRecus;
-    private Map<String, RmiNodeInterface> applicationsCibles;
+    private Map<String, CibleInfo> applicationsCibles = new HashMap<>();
 
 
     public ApplicationRecouvrement(String nom, String adresse) throws RemoteException {
@@ -23,7 +23,6 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
         this.nom = nom;
         this.adresse = adresse;
         this.voisins = new HashMap<>();
-        this.applicationsCibles = new HashMap<>();
         this.tableRoutage = new TableRoutage();
         this.messagesRecus = new HashSet<>();
         //chargerVoisins();
@@ -71,13 +70,18 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
                         else if (reseau.containsKey("applications_cibles")) {
                             JSONObject ciblesConfig = (JSONObject) reseau.get("applications_cibles");
                             if (ciblesConfig.containsKey(voisinNom)) {
-                                voisinIP = (String) ciblesConfig.get(voisinNom);
-                                System.out.println("[DEBUG] " + voisinNom + " est une application cible.");
+                                // Ici, la valeur est un objet JSON contenant "adresse" et "groupe"
+                                JSONObject cibleObj = (JSONObject) ciblesConfig.get(voisinNom);
+                                voisinIP = (String) cibleObj.get("adresse");
+                                String groupe = (String) cibleObj.get("groupe");
+                                System.out.println("[DEBUG] " + voisinNom + " est une application cible appartenant au groupe " + groupe + "," + voisinIP);
                                 try {
                                     // Récupération de l'instance distante de la cible via RMI
                                     RmiNodeInterface cible = (RmiNodeInterface) Naming.lookup("//" + voisinIP + "/" + voisinNom);
-                                    this.applicationsCibles.put(voisinNom, cible);
-                                    System.out.println("[SUCCESS] " + voisinNom + " est maintenant connu de " + nom);
+                                     // Créer l'objet CibleInfo et le stocker dans la map
+                                     CibleInfo info = new CibleInfo(cible, groupe);
+                                     this.applicationsCibles.put(voisinNom, info);
+                                     System.out.println("[SUCCESS] " + voisinNom + " (groupe " + groupe + ") est maintenant connu de " + nom);
                                 } catch (Exception e) {
                                     System.err.println("[ERREUR] Impossible d'ajouter l'application cible " + voisinNom + " : " + e.getMessage());
                                 }
@@ -90,7 +94,7 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
                     }
                 }
 
-                // 🕒 Attendre 5 secondes avant de réessayer
+                //  Attendre 5 secondes avant de réessayer
                 Thread.sleep(5000);
             } catch (Exception e) {
                 System.err.println("[ERREUR] Problème lors de la découverte des voisins : " + e.getMessage());
@@ -107,6 +111,17 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
         messagesRecus.add(messageId);
         System.out.println("[Recouvrement " + nom + "] Message reçu de " + source + " : " + contenu + " (TTL=" + ttl + ")");
 
+        // Vérifier s'il s'agit d'une diffusion restreinte par groupe
+        String groupeCible = null;
+        String contenuFinal = contenu;
+        if (contenu.startsWith("group:")) {
+            int idx = contenu.indexOf(";");
+            if (idx != -1) {
+                groupeCible = contenu.substring(6, idx); // extrait le groupe après "group:"
+                contenuFinal = contenu.substring(idx + 1); // le message propre
+            }
+        }
+        
         // Propager aux autres recouvrements
         for (String voisin : voisins.keySet()) {
             if (!voisin.equals(source)) {
@@ -114,13 +129,19 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
             }
         }
 
-        // Envoyer aussi aux applications cibles
-        for (String cible : applicationsCibles.keySet()) {
-            if (!cible.equals(source)) {
-                applicationsCibles.get(cible).recevoirMessage(this.nom, messageId, ttl - 1, contenu);
+        // Diffuser aux applications cibles
+        for (Map.Entry<String, CibleInfo> entry : applicationsCibles.entrySet()) {
+            String cibleNom = entry.getKey();
+            CibleInfo info = entry.getValue();
+            // Si un groupe cible est spécifié, ne transmettre qu'aux cibles appartenant à ce groupe
+            if (groupeCible == null || groupeCible.equals(info.getGroupe())) {
+                if (!cibleNom.equals(source)) {
+                    info.getCible().recevoirMessage(this.nom, messageId, ttl -1, contenuFinal);
+                }
             }
         }
-    }
+}
+
 
 
     public void recevoirTableRoutage(String source, Map<String, Integer> nouvellesRoutes) throws RemoteException {

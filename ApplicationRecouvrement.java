@@ -90,7 +90,7 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
                     }
                 }
 
-                // 🕒 Attendre 5 secondes avant de réessayer
+                //  Attendre 5 secondes avant de réessayer
                 Thread.sleep(5000);
             } catch (Exception e) {
                 System.err.println("[ERREUR] Problème lors de la découverte des voisins : " + e.getMessage());

@@ -199,6 +199,7 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
     }
 
     public void recevoirMessage(String source, String messageId, int ttl, String contenu) throws RemoteException {
+
         if (messagesRecus.contains(messageId) || ttl <= 0) {
             return;
         }
@@ -206,6 +207,13 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
         System.out.println(ConsoleColors.CYAN 
             + "[Recouvrement " + nom + "] Message reçu de " + source + " : " + contenu + " (TTL=" + ttl + ")"
             + ConsoleColors.RESET);
+
+        // Propager aux autres recouvrements
+        for (String voisin : voisins.keySet()) {
+            if (!voisin.equals(source)) {
+                voisins.get(voisin).recevoirMessage(this.nom, messageId, ttl - 1, contenu);
+            }
+        }
 
         // Extraction du groupe ciblé (si présent)
         String groupeCible = null;

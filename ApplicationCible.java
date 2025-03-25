@@ -87,7 +87,7 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
 
         //  Générer un ID unique et définir un TTL
         String messageId = UUID.randomUUID().toString();
-        int ttl = 3;
+        int ttl = 5;
 
         System.out.println("[INFO] " + nom + " envoie un message avec TTL=" + ttl);
         noeudRecouvrement.recevoirMessage(nom, messageId, ttl, contenu);

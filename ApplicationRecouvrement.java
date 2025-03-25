@@ -204,7 +204,7 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
             return;
         }
         messagesRecus.add(messageId);
-        System.out.println(ConsoleColors.CYAN 
+        System.out.println(ConsoleColors.PURPLE 
             + "[Recouvrement " + nom + "] Message reçu de " + source + " : " + contenu + " (TTL=" + ttl + ")"
             + ConsoleColors.RESET);
 

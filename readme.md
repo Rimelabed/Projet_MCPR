@@ -40,6 +40,7 @@ Pour répondre à l’exigence d’une **diffusion restreinte et dynamique**, no
 - **Fichier `reseau.json`** : Utilisé pour connaître l’adresse de chaque recouvrement et de chaque cible (mais plus pour gérer les groupes).  
 - **Connaissances de base en RMI** et en **Java Concurrency** (threads, ScheduledExecutorService).
 
+# Nouvelles structures et méthodes
 
 ### Classe CibleInfo 
 

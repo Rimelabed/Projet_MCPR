@@ -29,18 +29,20 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
         this.noeudRecouvrement = null;
 
         try {
-            // Charger les informations du réseau
+            // chargement des informations du réseau dpuis le fichier reseau.json - fichier contenant la topologie
             JSONParser parser = new JSONParser();
             JSONObject reseau = (JSONObject) parser.parse(new FileReader("reseau.json"));
             JSONObject applicationsCibles = (JSONObject) reseau.get("applications_cibles");
             JSONObject recouvrements = (JSONObject) reseau.get("recouvrements");
 
+            
+            
             if (!applicationsCibles.containsKey(nom)) {
                 System.err.println("[ERREUR] L'application cible " + nom + " n'est pas définie dans reseau.json !");
                 return;
             }
 
-            // Trouver le recouvrement correspondant
+            // Pour trouver le recouvrement correspondant
             for (Object key : recouvrements.keySet()) {
                 String recouvrementNom = (String) key;
                 JSONObject recouvrementConfig = (JSONObject) recouvrements.get(recouvrementNom);
@@ -64,7 +66,7 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
     {}
 
     private void connecterAuRecouvrement(String recouvrementNom) {
-       while (true) {  // Réessaie jusqu'à réussir à se connecter à une appli de recouvrement
+       while (true) {  // boucle qui va faire que l'applie Réessaie jusqu'à réussir à se connecter à une appli de recouvrement
         try {
             System.out.println("[DEBUG] " + nom + " tente de se connecter à " + recouvrementNom + " via RMI...");
             noeudRecouvrement = (RmiNodeInterface) Naming.lookup("//" + adresseRecouvrement + "/" + recouvrementNom);
@@ -73,7 +75,7 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
         } catch (Exception e) {
             System.err.println("[ERREUR] " + nom + " : Impossible de contacter " + recouvrementNom + " (Réessaie dans 5s)");
             try {
-                Thread.sleep(5000); // Attente de cinq secoondes avant la prochaine tentative - Modulable 
+                Thread.sleep(5000); // Attente de cinq secoondes avant la prochaine tentative - Modulable en fonction des besoins
             } catch (InterruptedException ignored) {}
         }
     }
@@ -85,7 +87,7 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
             return;
         }
 
-        //  Générer un ID unique et définir un TTL
+        // génération d'un ID unique et définition d'un TTL -> Eviter de boucler dans le reseau
         String messageId = UUID.randomUUID().toString();
         int ttl = 5;
 
@@ -129,14 +131,14 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
             registry.rebind(nom, cible);
             System.out.println("[INFO] " + nom + " enregistré dans le registre RMI.");
             
-            // thread heartbit
+            // thread heartbit -> poc que l'application cible est toujours présente -> l'appli cible est mainteanu dans son  groupe de diffusion 
 
-             // Démarrage du thread heartbeat dans l'instance cible
+             // thread heartbeat pour l'instance cible
             new Thread(() -> {
                 while (true) {
                     try {
                         Thread.sleep(10000); // Toutes les 10 secondes
-                        // Utilisez l'instance 'cible' pour accéder à joinedGroups
+                        // Utilisez l'instance 'cible' pour accéder à joinedGroups ()
                         for (String groupe : cible.joinedGroups) {
                             try {
                                 cible.noeudRecouvrement.heartbeat(groupe, nom);

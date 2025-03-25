@@ -15,7 +15,7 @@ public class MainServeur {
 
         String nom = args[0];  // L'identité de CE recouvrement
         try {
-            // Charger le fichier JSON
+            // Chargement du fichier JSON
             JSONObject reseau = (JSONObject) new JSONParser().parse(new FileReader("reseau.json"));
             System.out.println("[DEBUG] JSON chargé : " + reseau.toJSONString());
 
@@ -30,14 +30,14 @@ public class MainServeur {
             String adresse = (String) monConfig.get("adresse");
             System.out.println("[INFO] " + nom + " s'initialise avec l'adresse " + adresse);
 
-            // Démarrer RMI sur CETTE machine
+            // Démarrage de RMI sur CETTE machine
             LocateRegistry.createRegistry(1099);
             ApplicationRecouvrement recouvrement = new ApplicationRecouvrement(nom, adresse);
             Registry registry = LocateRegistry.getRegistry();
             registry.rebind(nom, recouvrement);
             System.out.println("[INFO] " + nom + " enregistré dans le registre RMI.");
 
-            // Attendre avant de charger les voisins
+            // Attention de X secs avant de charger les voisins
             System.out.println("[INFO] Attente de stabilisation...");
             Thread.sleep(3000);
 

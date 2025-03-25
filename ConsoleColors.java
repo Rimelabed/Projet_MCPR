@@ -1,4 +1,11 @@
 public class ConsoleColors {
+
+// L'intérêt de cette classe est la coloration du terminal notamment au niveau des applications de recouvrmeent
+// Ces derniers ont de nombreux messages de logs, de tout type
+// D'où la nécessité de pouvoir appliquer des couleurs distinctifs pour les différents types de messages logs
+
+// source : https://gist.github.com/spdeepak/9900c17bc6657541dfd162d30d498950
+
     // rénitialisation
     public static final String RESET = "\u001B[0m";
 

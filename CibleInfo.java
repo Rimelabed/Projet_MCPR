@@ -8,7 +8,7 @@ public class CibleInfo {
         this.cible = cible;
         this.groupe = groupe;
         this.cibleName = cibleName;
-        updateHeartbeat(); // Initialise avec l'heure actuelle
+        updateHeartbeat(); // initialise avec l'heure/timestamp actuelle
     }
 
     public RmiNodeInterface getCible() {

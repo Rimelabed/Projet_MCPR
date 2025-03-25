@@ -208,14 +208,14 @@ public class ApplicationRecouvrement extends UnicastRemoteObject implements RmiN
             + "[Recouvrement " + nom + "] Message reçu de " + source + " : " + contenu + " (TTL=" + ttl + ")"
             + ConsoleColors.RESET);
 
-        // Propager aux autres recouvrements
+        // propagation aux autres recouvrements
         for (String voisin : voisins.keySet()) {
             if (!voisin.equals(source)) {
                 voisins.get(voisin).recevoirMessage(this.nom, messageId, ttl - 1, contenu);
             }
         }
 
-        // Extraction du groupe ciblé (si présent)
+        // extraction du groupe ciblé (si présent)
         String groupeCible = null;
         String contenuFinal = contenu;
         if (contenu.startsWith("group:")) {

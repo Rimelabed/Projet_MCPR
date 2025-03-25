@@ -16,7 +16,6 @@ Dans cette étape, la diffusion est restreinte **dynamiquement** aux seules appl
 - [Heartbeat et Vérification Périodique](#heartbeat-et-vérification-périodique)
 - [Diffusion dynamique et restreinte](#diffusion-dynamique-et-restreinte)
 - [Compilation et Exécution](#compilation-et-exécution)
-- [Tutoriel de Test](#tutoriel-de-test)
 - [Améliorations et Couleurs](#améliorations-et-couleurs)
 - [Dépannage](#dépannage)
 - [NB](#NB)
@@ -41,6 +40,28 @@ Pour répondre à l’exigence d’une **diffusion restreinte et dynamique**, no
 - **Connaissances de base en RMI** et en **Java Concurrency** (threads, ScheduledExecutorService).
 
 # Nouvelles structures et méthodes
+
+### Interface-rminodeinterface
+Voici les modifications apportées à l’interface RmiNodeInterface pour intégrer la gestion dynamique des abonnements et le mécanisme de heartbeat :
+
+**Ajout des méthodes d’abonnement**
+Nous avons ajouté deux méthodes :
+
+`joinGroup(String groupe, String nomCible)`: Pour permettre à une application cible de rejoindre un groupe.
+
+`leaveGroup(String groupe, String nomCible)`: Pour permettre à une application cible de quitter un groupe.
+
+**Ajout de la méthode heartbeat**
+La méthode `heartbeat(String groupe, String nomCible)` a été introduite pour que le recouvrement puisse mettre à jour le timestamp de la dernière confirmation de présence d’une cible dans un groupe. Cela permet de retirer automatiquement les cibles inactives.
+``` java
+//  gestion dynamique des abonnements
+    void joinGroup(String groupe, String nomCible) throws RemoteException;
+    void leaveGroup(String groupe, String nomCible) throws RemoteException;
+    
+    // Méthode de heartbeat pour vérifier l'activité d'une cible dans un groupe
+    void heartbeat(String groupe, String nomCible) throws RemoteException;
+
+```
 
 ### Classe CibleInfo 
 
@@ -114,7 +135,6 @@ Ainsi, notre système construit un "arbre" de diffusion en temps réel, basé su
 ## Compilation et exécution
 
 Rien de changé.
-
 
 ## Amélioration et couleurs
 Les messages sont en couleurs à présents, donc plus facile à distinguer. (DEBUG en bleu, SUCCESS en vert, INFO en jaune, ERROR en rouge, Heartbeat et SUBSCRIPTIONS en bleau clair, et Messages en violet...)

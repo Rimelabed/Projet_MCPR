@@ -14,6 +14,7 @@ Dans cette étape, la diffusion est restreinte **dynamiquement** aux seules appl
   - [ApplicationRecouvrement](#applicationrecouvrement)
   - [ApplicationCible](#applicationcible)
 - [Heartbeat et Vérification Périodique](#heartbeat-et-vérification-périodique)
+- [Diffusion dynamique et restreinte](#diffusion-dynamique-et-restreinte)
 - [Compilation et Exécution](#compilation-et-exécution)
 - [Tutoriel de Test](#tutoriel-de-test)
 - [Améliorations et Couleurs](#améliorations-et-couleurs)
@@ -96,6 +97,18 @@ Thread de heartbeat : envoie périodiquement `noeudRecouvrement.heartbeat(groupe
 Le recouvrement lance un ScheduledExecutorService (initHeartbeat()) qui, toutes les X secondes, vérifie pour chaque groupe si la dernière timestamp (lastHeartbeat) dépasse un certain seuil (ex. 30 secondes). Si c’est le cas, la cible est considérée inactive et on la retire de subscriptions.
 
 L’application cible, de son côté, envoie un heartbeat (ex. toutes les 10 secondes) pour chaque groupe auquel elle est abonnée. Ainsi, si elle s’arrête brutalement, le recouvrement la détecte et l’exclut de la diffusion.
+
+
+## Diffusion dynamique et restreinte.
+
+Le système permet aux cibles de rejoindre ou de quitter un groupe à tout moment via des commandes joinGroup et leaveGroup. Le recouvrement, qui maintient une table dynamique (subscriptions), ne diffuse les messages qu’aux cibles actives qui ont rejoint le groupe ciblé. Ainsi, l’arbre de diffusion se construit et se met à jour en temps réel en fonction des abonnements.
+
+Routes et Flux Multicast :
+Contrairement à un protocole multicast complet (comme DVMRP ou PIM) qui calcule dynamiquement des routes optimales en fonction de la topologie du réseau et des flux de trafic, notre code ne "réapprend" pas automatiquement des routes de diffusion multicast.
+Il simule plutôt ce comportement par le biais du mécanisme d’abonnement : seuls les nœuds qui se sont abonné à un groupe (et qui envoient des heartbeats) font partie de l’arbre de diffusion pour ce groupe.
+En résumé, même si nous n’utilisons pas un algorithme de routage multicast sophistiqué, la combinaison de join/leave dynamique et de heartbeats permet de restreindre la diffusion aux cibles intéressées et actives, ce qui répond aux exigences de diffusion dynamique et restreinte.
+
+Ainsi, notre système construit un "arbre" de diffusion en temps réel, basé sur les abonnements (joins) et la vérification périodique (heartbeats) pour ne transmettre les messages qu’aux cibles actives appartenant à un groupe donné, simulant ainsi un environnement multicast dynamique.
 
 ## Compilation et exécution
 

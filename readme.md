@@ -8,6 +8,7 @@ Dans cette étape, la diffusion est restreinte **dynamiquement** aux seules appl
 ## Table des Matières
 - [Introduction](#introduction)
 - [Prérequis](#prérequis)
+- [Parser JSON](#parser-json)
 - [Nouvelles Structures et Méthodes](#nouvelles-structures-et-méthodes)
   - [Interface RmiNodeInterface](#interface-rminodeinterface)
   - [Classe CibleInfo](#classe-cibleinfo)
@@ -38,6 +39,77 @@ Pour répondre à l’exigence d’une **diffusion restreinte et dynamique**, no
 - **Port 1099** libre pour RMI  
 - **Fichier `reseau.json`** : Utilisé pour connaître l’adresse de chaque recouvrement et de chaque cible (mais plus pour gérer les groupes).  
 - **Connaissances de base en RMI** et en **Java Concurrency** (threads, ScheduledExecutorService).
+
+## Parser JSON
+### Tutoriel : Installation et Utilisation des Parsers JSON et Manipulation du Fichier `reseau.json`
+
+Ce tutoriel vous guide dans un aspects essentiels au projet, sans lequel le code serait inexécutable :
+**Installation et configuration d’un parser JSON** 
+### A. Pourquoi un parser JSON ?
+Un parser JSON permet de lire, analyser et manipuler des données au format JSON. Dans notre projet, le fichier `reseau.json` contient la configuration de l'overlay (adresses des recouvrements et cibles).
+
+Nous utiliserons **json-simple**, une bibliothèque légère pour Java, qui fournit un moyen simple de parser et générer du JSON.
+
+### B. Installation sur Linux
+
+#### 1. Installer la bibliothèque
+
+Sur une distribution basée sur Debian (Ubuntu, par exemple), vous pouvez installer la bibliothèque avec la commande suivante :
+
+```bash
+sudo apt-get install libjson-simple-java
+```
+2. Configurer le CLASSPATH
+Pour que la JVM trouve la bibliothèque, ajoutez-la à votre CLASSPATH. Par exemple, vous pouvez modifier votre fichier `~/.bashrc` en ajoutant :
+
+``` bash
+echo 'export CLASSPATH=$CLASSPATH:/usr/share/java/json-simple.jar:.' >> ~/.bashrc
+source ~/.bashrc
+```
+Cette commande ajoute `/usr/share/java/json-simple.jar` au CLASSPATH, ce qui permet à vos programmes Java de trouver la bibliothèque au moment de la compilation et de l'exécution.
+
+### 3. Vérifier l’installation
+Pour vérifier que le JAR est bien installé, utilisez :
+``` sh
+ls /usr/share/java/json-simple.jar
+```
+Vous devriez voir le fichier listé.
+
+### C. Installation sur Windows
+1. Télécharger la bibliothèque
+  Rendez-vous sur le Maven Repository de json-simple et téléchargez le JAR (par exemple, `json-simple-1.1.1.jar`).
+2. Configurer le classpath
+Option 1 : Utiliser la ligne de commande
+
+Placez le fichier JAR dans un répertoire de votre choix (par exemple, C:\libs\).
+
+Lors de la compilation et de l’exécution, utilisez l’option -cp pour inclure ce JAR.
+Par exemple, pour compiler :
+
+``` cmd
+javac -cp .;C:\libs\json-simple-1.1.1.jar MonProgramme.java
+```
+Et pour exec :
+``` cmd
+java -cp .;C:\libs\json-simple-1.1.1.jar MonProgramme
+```
+
+Option 2 : Définir la variable d'environnement CLASSPATH
+
+Ouvrez les paramètres système avancés et modifiez la variable d'environnement CLASSPATH pour y inclure `C:\libs\json-simple-1.1.1.jar;.`
+
+3. Utilisation dans un IDE (Oracle NetBeans, Eclipse, etc.)
+ Eclipse :
+
+Clic droit sur votre projet, sélectionnez Properties → Java Build Path → Libraries.
+
+Clic sur Add External JARs... et sélectionnez le fichier json-simple-1.1.1.jar.
+
+
+---
+
+
+
 
 # Nouvelles structures et méthodes
 

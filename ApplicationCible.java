@@ -10,6 +10,9 @@ import org.json.simple.parser.JSONParser;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.HashSet;
+
 
 
 public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInterface {
@@ -18,6 +21,7 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
     private String nom;
     private String adresseRecouvrement;
     private RmiNodeInterface noeudRecouvrement;
+    private Set<String> joinedGroups = new HashSet<>();
 
     public ApplicationCible(String nom) throws RemoteException {
         super();
@@ -95,7 +99,21 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
         }
         System.out.println("[CIBLE " + nom + "] Message reçu de " + source + " : " + contenu);
     }
-    
+    @Override
+    public void joinGroup(String groupe, String nomCible) throws RemoteException {
+        // rien faire ici, car la gestion est assurée par le recouvrement
+    }
+
+    @Override
+    public void leaveGroup(String groupe, String nomCible) throws RemoteException {
+        //  rien faire ici
+    }
+    @Override
+    public void heartbeat(String groupe, String nomCible) throws RemoteException {
+        // rien faire ici
+    }
+
+
 
     public static void main(String[] args) {
         if (args.length != 1) {
@@ -110,38 +128,76 @@ public class ApplicationCible extends UnicastRemoteObject implements RmiNodeInte
             Registry registry = LocateRegistry.getRegistry();
             registry.rebind(nom, cible);
             System.out.println("[INFO] " + nom + " enregistré dans le registre RMI.");
-            // Envoi d'un message de test après connexion
-            // cible.envoyerMessage("Hello depuis " + nom + " !");
+            
+            // thread heartbit
+
+             // Démarrage du thread heartbeat dans l'instance cible
+            new Thread(() -> {
+                while (true) {
+                    try {
+                        Thread.sleep(10000); // Toutes les 10 secondes
+                        // Utilisez l'instance 'cible' pour accéder à joinedGroups
+                        for (String groupe : cible.joinedGroups) {
+                            try {
+                                cible.noeudRecouvrement.heartbeat(groupe, nom);
+                            } catch (Exception e) {
+                                System.err.println("[HEARTBEAT] Erreur lors de l'envoi du heartbeat pour le groupe " + groupe + ": " + e.getMessage());
+                            }
+                        }
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            }).start();
+
+
+
              // Menu interactif
-             Scanner scanner = new Scanner(System.in);
-             while (true) {
-                 System.out.println("\n=== Menu de " + nom + " ===");
-                 System.out.println("1. Tester la connexion avec le réseau");
-                 System.out.println("2. Envoyer un message court personnalisé");
-                 System.out.println("0. Quitter");
-                 System.out.print("Votre choix : ");
-                 String choix = scanner.nextLine();
-             
-                 if (choix.equals("1")) {
-                     cible.envoyerMessage("Message de test de connexion de " + nom);
-                 } else if (choix.equals("2")) {
-                     System.out.print("Entrez le groupe cible (laisser vide pour diffusion totale) : ");
-                     String groupeCible = scanner.nextLine().trim();
-                     System.out.print("Entrez votre message : ");
-                     String message = scanner.nextLine();
-                     if (!groupeCible.isEmpty()) {
-                         // Préfixer le message par l'information de groupe
-                         message = "group:" + groupeCible + ";" + message;
-                     }
-                     cible.envoyerMessage(message);
-                 } else if (choix.equals("0")) {
-                     System.out.println("Fermeture de l'application.");
-                     break;
-                 } else {
-                     System.out.println("Choix invalide. Veuillez réessayer.");
-                 }
-             }
-             scanner.close();
+            Scanner scanner = new Scanner(System.in);
+            while (true) {
+                System.out.println("\n=== Menu de " + nom + " ===");
+                System.out.println("1. Tester la connexion avec le réseau");
+                System.out.println("2. Envoyer un message court personnalisé");
+                System.out.println("3. Rejoindre un groupe");
+                System.out.println("4. Quitter un groupe");
+                System.out.println("5. Afficher mes groupes");
+                System.out.println("0. Quitter l'application");
+                System.out.print("Votre choix : ");
+                String choix = scanner.nextLine();
+
+                if (choix.equals("1")) {
+                    cible.envoyerMessage("Message de test de connexion de " + nom);
+                } else if (choix.equals("2")) {
+                    System.out.print("Entrez le groupe cible (laisser vide pour diffusion totale) : ");
+                    String groupeCible = scanner.nextLine().trim();
+                    System.out.print("Entrez votre message : ");
+                    String message = scanner.nextLine();
+                    if (!groupeCible.isEmpty()) {
+                        message = "group:" + groupeCible + ";" + message;
+                    }
+                    cible.envoyerMessage(message);
+                } else if (choix.equals("3")) {
+                    System.out.print("Entrez le groupe auquel vous souhaitez vous abonner : ");
+                    String groupe = scanner.nextLine().trim();
+                    cible.noeudRecouvrement.joinGroup(groupe, nom);
+                    cible.joinedGroups.add(groupe);
+                } else if (choix.equals("4")) {
+                    System.out.print("Entrez le groupe que vous souhaitez quitter : ");
+                    String groupe = scanner.nextLine().trim();
+                    cible.noeudRecouvrement.leaveGroup(groupe, nom);
+                    cible.joinedGroups.remove(groupe);
+                } else if (choix.equals("5")) {
+                    System.out.println("Vous êtes abonné aux groupes : " + cible.joinedGroups);
+                } else if (choix.equals("0")) {
+                    System.out.println("Fermeture de l'application.");
+                    break;
+                } else {
+                    System.out.println("Choix invalide. Veuillez réessayer.");
+                }
+            }
+            scanner.close();
+
+
 
         } catch (Exception e) {
             System.err.println("[ERREUR] Problème lors du démarrage : " + e.getMessage());

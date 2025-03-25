@@ -1,111 +1,60 @@
 # MCPR - Projet Overlay
-## Étape 4 : Diffusion Restreinte par Groupes
+## Étape 4 : Diffusion Restreinte Dynamique (Multicast par Abonnements)
 
-Cette étape introduit la diffusion restreinte, c’est-à-dire que les messages ne sont envoyés qu’aux applications cibles appartenant à un groupe spécifique. L’objectif est d’éviter une diffusion totale du message et de limiter la propagation uniquement aux cibles intéressées (par exemple, groupe "ventes", "RH", etc.).
+Dans cette étape, la diffusion est restreinte **dynamiquement** aux seules applications cibles qui se sont abonnées à un groupe via un mécanisme de **join/leave**. Cela simule un fonctionnement proche du multicast réel (type IGMP), où les hôtes rejoignent ou quittent un groupe à tout moment.
 
 ---
 
 ## Table des Matières
-
 - [Introduction](#introduction)
 - [Prérequis](#prérequis)
-- [Nouvelle Topologie JSON](#nouvelle-topologie-json)
-- [Modifications du Code](#modifications-du-code)
+- [Nouvelles Structures et Méthodes](#nouvelles-structures-et-méthodes)
+  - [Interface RmiNodeInterface](#interface-rminodeinterface)
   - [Classe CibleInfo](#classe-cibleinfo)
   - [ApplicationRecouvrement](#applicationrecouvrement)
   - [ApplicationCible](#applicationcible)
-- [Compilation et Exécution](#compilation-et-ex%C3%A9cution)
+- [Heartbeat et Vérification Périodique](#heartbeat-et-vérification-périodique)
+- [Compilation et Exécution](#compilation-et-exécution)
 - [Tutoriel de Test](#tutoriel-de-test)
-- [Dépannage](#d%C3%A9pannage)
-- [Prochaines Étapes](#prochaines-%C3%A9tapes)
+- [Améliorations et Couleurs](#améliorations-et-couleurs)
+- [Dépannage](#dépannage)
+- [NB](#NB)
 
 ---
 
 ## Introduction
 
-Dans cette étape, nous restreignons la diffusion des messages aux applications cibles qui appartiennent à un groupe particulier.  
-Pour cela, nous :
-- **Mettons à jour le fichier de configuration JSON** pour y inclure un attribut `"groupe"` pour chaque application cible.
-- **Créons une nouvelle classe `CibleInfo`** pour stocker la référence distante et le groupe de chaque cible.
-- **Modifions l'application de recouvrement** pour qu'elle filtre les messages en fonction du groupe indiqué dans le message.
-- **Adaptation de l'interface utilisateur** dans l'application cible pour permettre à l'utilisateur d'envoyer un message ciblé sur un groupe spécifique.
+Pour répondre à l’exigence d’une **diffusion restreinte et dynamique**, nous avons mis en place :
+
+1. Un **système d’abonnement** permettant aux applications cibles de rejoindre ou quitter un groupe à l’exécution.  
+2. Un **mécanisme de heartbeat** pour vérifier que les cibles abonnées sont toujours actives.  
+3. Une **table de routage dynamique** dans l’application de recouvrement, qui ne diffuse un message à un groupe que vers les cibles qui s’y sont abonnées.
 
 ---
 
 ## Prérequis
 
-- **JDK 8 ou supérieur**  
-- **Accès au port 1099** pour le registre RMI  
-- **Configuration correcte** du fichier `reseau.json`  
-- **Connaissance de base de RMI et JSON**
+- **Java 8 ou supérieur**  
+- **Port 1099** libre pour RMI  
+- **Fichier `reseau.json`** : Utilisé pour connaître l’adresse de chaque recouvrement et de chaque cible (mais plus pour gérer les groupes).  
+- **Connaissances de base en RMI** et en **Java Concurrency** (threads, ScheduledExecutorService).
 
----
-
-## Nouvelle Topologie JSON
-
-Le fichier `reseau.json` est modifié pour intégrer les informations de groupe pour les applications cibles. Voici un exemple de configuration mise à jour :
-
-```json
-{
-  "recouvrements": {
-    "AppRecouv_1": {
-      "adresse": "198.18.61.169",
-      "voisins": {
-        "AppRecouv_2": 1,
-        "AppRecouv_3": 1
-      }
-    },
-    "AppRecouv_2": {
-      "adresse": "198.18.60.238",
-      "voisins": {
-        "AppRecouv_1": 1,
-        "AppCible_3": 1
-      }
-    },
-    "AppRecouv_3": {
-      "adresse": "198.18.60.239",
-      "voisins": {
-        "AppRecouv_1": 1,
-        "AppCible_1": 1,
-        "AppCible_2": 1
-      }
-    }
-  },
-  "applications_cibles": {
-    "AppCible_1": { "adresse": "198.18.61.160", "groupe": "ventes" },
-    "AppCible_2": { "adresse": "198.18.61.161", "groupe": "RH" },
-    "AppCible_3": { "adresse": "198.18.60.245", "groupe": "ventes" }
-  }
-}
-```
-
-Chaque application cible a désormais une adresse et un attribut "groupe" indiquant son appartenance.
-
-## Modifications du Code
 
 ### Classe CibleInfo 
 
-Création d'un fichier CibleInfo.java qui encapsule la référence RMI et le groupe de l’application cible :
+Création d'un fichier CibleInfo.java qui encapsule la référence RMI et le groupe de l’application cible afin d’associer les informations de chaque cible au recouvrement (référence RMI, nom de la cible, timestamp de heartbeat, etc.)
 
 ``` java
-
 public class CibleInfo {
     private RmiNodeInterface cible;
-    private String groupe;
+    private String cibleName;
+    private long lastHeartbeat;
 
-    public CibleInfo(RmiNodeInterface cible, String groupe) {
+    public CibleInfo(RmiNodeInterface cible, String cibleName) {
         this.cible = cible;
-        this.groupe = groupe;
+        this.cibleName = cibleName;
+        updateHeartbeat();
     }
-
-    public RmiNodeInterface getCible() {
-        return cible;
-    }
-
-    public String getGroupe() {
-        return groupe;
-    }
-}
 ```
 
 ### ApplicationRecouvrement
@@ -114,36 +63,62 @@ public class CibleInfo {
 2. Filtrage lors de la diffusion des messages
     Dans la méthode `recevoirMessage`, on vérifie si le contenu du message contient un préfixe indiquant le groupe ciblé. Si oui, on extrait ce groupe et le message n'est diffusé qu'aux cibles dont l'attribut "groupe" correspond.
 
+Note : Dans le projet, on garde encore un champ groupe pour le groupe “initial” dans le fichier de topologie, mais ici, on s’appuie principalement sur la table d’abonnements dynamique.
+
+### ApplicationRecouvrement
+Structure `subscriptions` : un `Map<String`, `Set<CibleInfo>>` associant chaque groupe à l’ensemble des cibles qui s’y sont abonnées.
+
+Méthodes `joinGroup` et `leaveGroup` :
+
+`joinGroup` ajoute la cible dans subscriptions[groupe].
+
+`leaveGroup` la retire.
+
+Méthode `heartbeat` : met à jour la timestamp de la cible dans subscriptions, si elle est toujours présente.
+
+`Diffusion` : dans `recevoirMessage`, si le message est préfixé par "`group:<nomGroupe>;`", on n’envoie qu’aux cibles abonnées à <nomGroupe> ; sinon on envoie à toutes les cibles connues.
+
 ### ApplicationCible
 
 1. Mise à jour du menu interactif
-    Dans la boucle du menu, on demande à l’utilisateur de saisir un groupe cible pour une diffusion restreinte. Si l'utilisateur fournit un groupe, le message est préfixé avec "group:<nomDuGroupe>;".
+    Dans la boucle du menu, on demande à l’utilisateur de saisir un groupe cible pour une diffusion restreinte. Si l'utilisateur fournit un groupe, le message est préfixé avec "`group:<nomDuGroupe>;`".
 2. Méthode d'envoi 
     La méthode `envoyerMessage` reste inchangée, elle envoie simplement le message tel qu'il est fourni. Le préfixe sera interprété par les recouvrements.
+3. Option "Rejoindre un groupe" => appelle noeudRecouvrement.joinGroup(groupe, monNom);
+
+4. Option "Quitter un groupe" => appelle `noeudRecouvrement.leaveGroup(groupe, monNom);`
+
+5. Liste des groupes rejoints (`joinedGroups`) : stockés localement pour que l’application sache à quels groupes elle est abonnée.
+
+Thread de heartbeat : envoie périodiquement `noeudRecouvrement.heartbeat(groupe, monNom)`; pour chaque groupe abonné, afin de signaler que la cible est toujours active.
+
+## Heartbeat et vérification périodique
+Le recouvrement lance un ScheduledExecutorService (initHeartbeat()) qui, toutes les X secondes, vérifie pour chaque groupe si la dernière timestamp (lastHeartbeat) dépasse un certain seuil (ex. 30 secondes). Si c’est le cas, la cible est considérée inactive et on la retire de subscriptions.
+
+L’application cible, de son côté, envoie un heartbeat (ex. toutes les 10 secondes) pour chaque groupe auquel elle est abonnée. Ainsi, si elle s’arrête brutalement, le recouvrement la détecte et l’exclut de la diffusion.
 
 ## Compilation et exécution
 
 Rien de changé.
 
-## Tutoriel de test
+
+## Amélioration et couleurs
+Les messages sont en couleurs à présents, donc plus facile à distinguer. (DEBUG en bleu, SUCCESS en vert, INFO en jaune, ERROR en rouge, Heartbeat et SUBSCRIPTIONS en bleau clair, et Messages en violet...)
+
+
+## Dépannage
 
 1. Vérifiez la configuration :
 Assurez-vous que le fichier reseau.json contient bien les adresses et groupes.
 
 2. Démarrez les recouvrements :
 Lancer les instances des applications de recouvrement sur les machines ou terminaux appropriés.
+  - Vérifiez les logs : Les recouvrements doivent afficher le message avec le préfixe de groupe et transmettre uniquement aux cibles correspondantes
 
 3. Démarrez les applications cibles :
 Lancez chaque application cible. Chaque cible va s'enregistrer dans le registre RMI et se connecter au recouvrement défini dans reseau.json.
 
-4. Utilisez le menu interactif de l'application cible :
-    - Option 1 : Envoyer un message de test (diffusion totale) et observer dans les logs des recouvrements et des autres cibles que le message est reçu.
-    - Option 2 : Saisir un groupe cible (par exemple, "ventes" ou "RH") et un message personnalisé. Seules les applications cibles appartenant à ce groupe devraient recevoir le message.
-    - Vérifiez les logs : Les recouvrements doivent afficher le message avec le préfixe de groupe et transmettre uniquement aux cibles correspondantes.
 
 ## NB 
 N'hésitez pas à augmenter le délai de tentative de reconnexion entre les applications de recouvrement lorsque ces derniers ne sont pas tous allumés, pour éviter d'avoir toutes les cinq secondes des logs d'erreurs.
 
-## Suggestion : 
-
-Différencier les messages provenant des cibles avec une coloration sur le terminal, par exemple. Faire de même pour les messages de logs (DEBUG en jaune, SUCCESS en vert, ERROR en rouge et Messages en bleu...)
